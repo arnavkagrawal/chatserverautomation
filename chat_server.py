@@ -1,14 +1,19 @@
 #!/usr/bin/python
+# Needs to be run in the web2py environment
+# sudo python web2py.py -S eden -M -R chat_server.py
+
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import time
 import os
+
 #definations
 driver = webdriver.Firefox()
 css_select = driver.find_element_by_css_selector 
 wait=time.sleep
 wait_t=1
 
+#functions
 def add_property(property_name, property_value):
     p_n_field=css_select(".jive-table > table > tbody> tr:nth-of-type(1) > td:nth-of-type(2) > input")
     p_v_field=css_select(".jive-table > table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > textarea")
@@ -38,9 +43,7 @@ def edit_property(property_name,value):
 
 def add_plugin(plugin_name):
     search_string="//*[contains(text(),'"+ plugin_name +"')]"
-    print plugin_name
     elem = driver.find_elements_by_xpath(search_string)
-    print elem
     elem[0].find_elements_by_xpath("ancestor::tr/td[8]/a")[0].click()
     wait(20)
     return
@@ -111,22 +114,30 @@ def login_with_initials(ini_username,ini_password):
     return server_name
 
 #configure settings here
-#the username for intial user 
-ini_username="admin"
 #the password for intial user 
 ini_password="admin"
-admin_email="arnavkagrawal@gmail.com"
 sahana_dbname="sahana"
-openfire_db="openfiredb"
+openfire_db="open"
+#A default group for everyone to be in
 group_name="everyone"
+#mysql settings
 sql_username="root"
 sql_password="knowing42"
-ini_password="admin"
-#the new user created by w2p 
-admin_username="normaluser_example.com"
+#the new user created by w2p for chat admin
+admin_username="chatadmin"
+admin_password="eden"
+admin_name="Chat Admin"
+admin_email="chatadmin@example.com"
+#configuration ends here
 
-
+#The default username for intial login. Should not be changed
 ini_username="admin"
+
+#create chat admin user in sahana db
+db.auth_user.insert(email=admin_email, username=admin_username, password=admin_password, first_name=admin_name)
+db.commit()
+
+#Server Setup
 driver.get("http://127.0.0.1:9090/")
 css_select("#jive-setup-save").click()
 wait(wait_t)
@@ -216,16 +227,14 @@ add_property("jdbcUserProvider.searchSQL","select username from auth_user where"
 add_property("jdbcUserProvider.usernameField","username")
 add_property("jdbcUserProvider.emailField","email")
 add_property("jdbcUserProvider.nameField","first_name")
-print admin_username+"@"+server_name
 add_property("admin.authorizedJIDs",str(admin_username+"@"+server_name))
 
 #edit already present property
 edit_property("provider.auth.className","org.jivesoftware.openfire.auth.JDBCAuthProvider")
 edit_property("provider.user.className","org.jivesoftware.openfire.user.JDBCUserProvider")
-
 os.system("sudo /opt/openfire/bin/openfire restart")
 wait(30)
-server_name = login_with_initials(admin_username,"normal")
+server_name = login_with_initials(admin_username,admin_password)
 add_admin_to_group(group_name,admin_username)
 os.system("sudo /opt/openfire/bin/openfire restart")
 driver.close()
