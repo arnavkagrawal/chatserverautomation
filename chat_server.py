@@ -2,6 +2,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import time
+import os
 #definations
 driver = webdriver.Firefox()
 css_select = driver.find_element_by_css_selector 
@@ -11,6 +12,8 @@ wait_t=1
 def add_property(property_name, property_value):
     p_n_field=css_select(".jive-table > table > tbody> tr:nth-of-type(1) > td:nth-of-type(2) > input")
     p_v_field=css_select(".jive-table > table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > textarea")
+    enc_type=css_select(".jive-table > table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input:nth-of-type(2)")
+    enc_type.click()
     p_n_field.send_keys(property_name)
     p_v_field.send_keys(property_value)
     save_prop=css_select(".jive-table > table > tfoot > tr:nth-of-type(1) > td:nth-of-type(1) > input:nth-of-type(1)")
@@ -22,12 +25,24 @@ def edit_property(property_name,value):
     search_string="//*[contains(text(),'"+ property_name +"')]"
     elem = driver.find_elements_by_xpath(search_string)
     elem[0].find_elements_by_xpath("ancestor::tr/td[3]/a")[0].click() 
+    enc_type=css_select(".jive-table > table > tbody > tr:nth-of-type(3) > td:nth-of-type(2) > input:nth-of-type(2)")
+    enc_type.click()
     property_value=css_select(".jive-table > table > tbody > tr:nth-of-type(2) > td:nth-of-type(2) > textarea")
     property_value.clear()
     property_value.send_keys(value)
     submit_but=css_select(".jive-table > table > tfoot > tr:nth-of-type(1) > td:nth-of-type(1) > input:nth-of-type(1)")
     submit_but.click()
     wait(wait_t)
+    return
+
+
+def add_plugin(plugin_name):
+    search_string="//*[contains(text(),'"+ plugin_name +"')]"
+    print plugin_name
+    elem = driver.find_elements_by_xpath(search_string)
+    print elem
+    elem[0].find_elements_by_xpath("ancestor::tr/td[8]/a")[0].click()
+    wait(20)
     return
 
 #roster sharing by group creation
@@ -149,17 +164,55 @@ server_name=server_name.strip()
 #wait to load page
 wait(wait_t)
 
+#enable bosh
+driver.get("http://127.0.0.1:9090/http-bind.jsp")
+wait(wait_t)
+css_select("#rb03").click()
+css_select("#settingsUpdate").click()
+wait(wait_t)
+
+#install plugins
+driver.get("http://127.0.0.1:9090/available-plugins.jsp")
+wait(wait_t)
+#download plugin list
+try:
+    css_select("#reloaderID > a").click()
+    wait(10)
+except:
+    pass
+plugin_list=["Broadcast","Client Control","Presence Service","Registration","User Creation","User Import Export"]
+for i in plugin_list:
+    add_plugin(str(i))
+
+os.system("sudo /opt/openfire/bin/openfire restart")
+wait(30)
+
+
+#relogin
+driver.get("http://127.0.0.1:9090/login.jsp")
+username_field = driver.find_element_by_name("username")
+pass_field = driver.find_element_by_name("password")
+#initial login
+username_field.send_keys(ini_username)
+pass_field.send_keys(ini_password)
+login_button = css_select("input[type='submit']")
+login_button.click()
+server_name=css_select(".info-table > tbody > tr:nth-of-type(4) > td:nth-of-type(2)").get_attribute('innerHTML')
+#the server name
+server_name=server_name.strip()
+#wait to load page
+wait(wait_t)
+
+
 #group creation
 create_group(group_name)
 
 registeration_property(group_name)
 allow_status_messages()
 #db integration part
-#properties = css_select("#jive-sidebar > ul > li:nth-of-type(2) > a")
-#properties.click()
 driver.get("http://127.0.0.1:9090/server-properties.jsp")
 wait(wait_t)
-add_property("normalrovider.driver","com.mysql.jdbc.Driver")
+add_property("jdbcProvider.driver","com.mysql.jdbc.Driver")
 
 add_property("jdbcProvider.connectionString","jdbc:mysql://localhost/"+sahana_dbname+"?user="+sql_username+"&password="+sql_password)
 
@@ -172,13 +225,13 @@ add_property("jdbcUserProvider.searchSQL","select username from auth_user where"
 add_property("jdbcUserProvider.usernameField","username")
 add_property("jdbcUserProvider.emailField","email")
 add_property("jdbcUserProvider.nameField","first_name")
-
-#tochange
-add_property("admin.authorizedJIDs",admin_username+"@"+server_name)
+print admin_username+"@"+server_name
+add_property("admin.authorizedJIDs",str(admin_username+"@"+server_name))
 
 #edit already present property
-edit_property("provider.auth.className","org.jivesoftware.openfire.auth.JDBCAuthProvider ")
-edit_property("provider.user.className","org.jivesoftware.openfire.user.JDBCUserProvider ")
+edit_property("provider.auth.className","org.jivesoftware.openfire.auth.JDBCAuthProvider")
+edit_property("provider.user.className","org.jivesoftware.openfire.user.JDBCUserProvider")
 
 add_admin_to_group(group_name,admin_username)
+os.system("sudo /opt/openfire/bin/openfire restart")
 driver.close()
