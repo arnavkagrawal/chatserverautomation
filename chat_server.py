@@ -68,13 +68,13 @@ def create_group(group_name):
 #default adding of users to group
 def registeration_property(group_name):
     driver.get("http://127.0.0.1:9090/plugins/registration/registration-props-form.jsp")
-    default_group=css_select(".jive-contentBox > table > tbody > tr > td > input")
+    default_group=css_select("#jive-main-content > form:nth-of-type(3) > .jive-contentBox > table > tbody > tr:nth-of-type(1) > td:nth-of-type(1) > input")
     default_group.send_keys(group_name) 
-    css_select(".jive-contentBox > input ").click()
+    css_select("#jive-main-content > form:nth-of-type(3) >.jive-contentBox > input ").click()
     wait(wait_t)
-    css_select(".jive-contentBox > table > tbody > tr:nth-of-type(4) > td:nth-of-type(1) > input").click()
+    css_select("#jive-main-content > form:nth-of-type(1) >.jive-contentBox > table > tbody > tr:nth-of-type(4) > td:nth-of-type(1) > input").click()
     wait(wait_t)
-    css_select(".jive-contentBox > input").click()
+    css_select("#jive-main-content > form:nth-of-type(1) >.jive-contentBox > input").click()
     wait(wait_t)
     return
 
@@ -94,6 +94,21 @@ def allow_status_messages():
     css_select("#jive-main-content > form > input").click()
     wait(wait_t)
     return
+
+def login_with_initials(ini_username,ini_password):
+    driver.get("http://127.0.0.1:9090/login.jsp")
+    username_field = driver.find_element_by_name("username")
+    pass_field = driver.find_element_by_name("password")
+    username_field.send_keys(ini_username)
+    pass_field.send_keys(ini_password)
+    login_button = css_select("input[type='submit']")
+    login_button.click()
+    server_name=css_select(".info-table > tbody > tr:nth-of-type(4) > td:nth-of-type(2)").get_attribute('innerHTML')
+    #the server name
+    server_name=server_name.strip()
+    #wait to load page
+    wait(wait_t)
+    return server_name
 
 #configure settings here
 #the username for intial user 
@@ -150,19 +165,7 @@ css_select("#jive-setup-save").click()
 
 wait(10)
 
-driver.get("http://127.0.0.1:9090/login.jsp")
-username_field = driver.find_element_by_name("username")
-pass_field = driver.find_element_by_name("password")
-#initial login
-username_field.send_keys(ini_username)
-pass_field.send_keys(ini_password)
-login_button = css_select("input[type='submit']")
-login_button.click()
-server_name=css_select(".info-table > tbody > tr:nth-of-type(4) > td:nth-of-type(2)").get_attribute('innerHTML')
-#the server name
-server_name=server_name.strip()
-#wait to load page
-wait(wait_t)
+server_name = login_with_initials(ini_username,ini_password)
 
 #enable bosh
 driver.get("http://127.0.0.1:9090/http-bind.jsp")
@@ -189,19 +192,7 @@ wait(30)
 
 
 #relogin
-driver.get("http://127.0.0.1:9090/login.jsp")
-username_field = driver.find_element_by_name("username")
-pass_field = driver.find_element_by_name("password")
-#initial login
-username_field.send_keys(ini_username)
-pass_field.send_keys(ini_password)
-login_button = css_select("input[type='submit']")
-login_button.click()
-server_name=css_select(".info-table > tbody > tr:nth-of-type(4) > td:nth-of-type(2)").get_attribute('innerHTML')
-#the server name
-server_name=server_name.strip()
-#wait to load page
-wait(wait_t)
+server_name = login_with_initials(ini_username,ini_password)
 
 
 #group creation
@@ -232,6 +223,9 @@ add_property("admin.authorizedJIDs",str(admin_username+"@"+server_name))
 edit_property("provider.auth.className","org.jivesoftware.openfire.auth.JDBCAuthProvider")
 edit_property("provider.user.className","org.jivesoftware.openfire.user.JDBCUserProvider")
 
+os.system("sudo /opt/openfire/bin/openfire restart")
+wait(30)
+server_name = login_with_initials(admin_username,"normal")
 add_admin_to_group(group_name,admin_username)
 os.system("sudo /opt/openfire/bin/openfire restart")
 driver.close()
