@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Needs to be run in the web2py environment
-# sudo python web2py.py -S eden -M -R chat_server.py
+# sudo python web2py.py -S eden -M -R psql.py
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
