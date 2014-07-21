@@ -121,7 +121,7 @@ openfire_db="open"
 #A default group for everyone to be in
 group_name="everyone"
 #psql settings
-psql_username="root"
+psql_username="arnav"
 psql_password="knowing42"
 #the new user created by w2p for chat admin
 admin_username="chatadmin"
